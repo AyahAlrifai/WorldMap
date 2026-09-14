@@ -145,8 +145,12 @@
   .dashRow{
     border:1px solid var(--border); border-radius:14px;
     padding:10px 14px; margin-bottom:10px;
+    overflow:hidden;
   }
-  .dashRowHead{ display:flex; justify-content:space-between; align-items:center; font-size:14.5px; font-weight:700; margin-bottom:6px; }
+  .dashRowHead{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14.5px; font-weight:700; margin-bottom:6px; cursor:pointer; user-select:none; }
+  .dashRowHead .dashTitle{ display:flex; align-items:center; gap:7px; }
+  .dashExpand{ font-size:11px; color:var(--muted); transition:transform .2s; }
+  .dashRow.expanded .dashExpand{ transform:rotate(180deg); }
   .dashRowHead .dashRemaining{ font-size:12px; font-weight:600; color:var(--muted); }
   .dashBarTrack{ background:#eef1f5; border-radius:8px; height:10px; overflow:hidden; display:flex; }
   .dashBarSeg{ height:100%; }
@@ -155,6 +159,18 @@
   .dashBarSeg.learning{ background:#1a73e8; }
   .dashLegendRow{ display:flex; gap:10px; margin-top:6px; font-size:11px; color:var(--muted); }
   .dashLegendRow span{ display:flex; align-items:center; gap:3px; }
+  .dashCountries{ display:none; margin-top:10px; border-top:1px solid var(--border); padding-top:8px; }
+  .dashRow.expanded .dashCountries{ display:block; }
+  .dashCountry{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 2px; font-size:13px; border-bottom:1px solid #f0f1f3; }
+  .dashCountry:last-child{ border-bottom:none; }
+  .dashCountryName{ display:flex; align-items:center; gap:7px; min-width:0; }
+  .dashCountryFlag{ font-size:18px; flex-shrink:0; }
+  .dashCountryLabel{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dashCountryStatus{ flex-shrink:0; font-size:11px; font-weight:700; border-radius:8px; padding:4px 7px; }
+  .dashCountryStatus.confident{ color:#166b30; background:#e6f6ea; }
+  .dashCountryStatus.review{ color:#a5690a; background:#fff4e0; }
+  .dashCountryStatus.learning{ color:#0b57d0; background:#e8f0fe; }
+  .dashCountryStatus.none{ color:var(--muted); background:#f3f4f6; }
   #dashCloseBtn{
     width:100%; border:none; border-radius:12px; padding:11px;
     background:#eef1f5; color:var(--text); font-size:14px; font-weight:600;
@@ -501,10 +517,19 @@ function renderDashboard(){
     const done = s.learning + s.review + s.confident;
     const remaining = s.total - done;
     const pct = n => s.total ? (n / s.total * 100) : 0;
+    const countries = Object.keys(ARABIC_DATA)
+      .filter(key => ARABIC_DATA[key].continent === cont)
+      .sort((a,b) => ARABIC_DATA[a].name_ar.localeCompare(ARABIC_DATA[b].name_ar, 'ar'));
+    const statusLabel = {
+      confident: '🟢 حافظتها',
+      review: '🟠 بدها مراجعة',
+      learning: '🔵 عم بحفظها',
+      none: '⚪ لسا'
+    };
     return `
       <div class="dashRow">
-        <div class="dashRowHead">
-          <span>${cont}</span>
+        <div class="dashRowHead" data-continent="${cont}">
+          <span class="dashTitle"><span class="dashExpand">▼</span><span>${cont}</span></span>
           <span class="dashRemaining">${done} / ${s.total} — باقي ${remaining}</span>
         </div>
         <div class="dashBarTrack">
@@ -517,8 +542,24 @@ function renderDashboard(){
           <span>🟠 ${s.review}</span>
           <span>🔵 ${s.learning}</span>
         </div>
+        <div class="dashCountries">
+          ${countries.map(key => {
+            const d = ARABIC_DATA[key];
+            const st = statusOf(key);
+            return `<div class="dashCountry">
+              <span class="dashCountryName"><span class="dashCountryFlag">${d.flag}</span><span class="dashCountryLabel">${d.name_ar}</span></span>
+              <span class="dashCountryStatus ${st}">${statusLabel[st]}</span>
+            </div>`;
+          }).join('')}
+        </div>
       </div>`;
   }).join('');
+
+  dashList.querySelectorAll('.dashRowHead').forEach(head => {
+    head.addEventListener('click', () => {
+      head.parentElement.classList.toggle('expanded');
+    });
+  });
 }
 
 const dashOverlay = document.getElementById('dashOverlay');
